@@ -89,7 +89,18 @@ install_mpas_model () {
   make clean CORE=atmosphere
   make intel-mpi CORE=atmosphere ${MPAS_MAKE_OPTIONS}
   cp -v atmosphere_model ${EXEC_DIR}
-  ./build_tables
+  ./build_tables_tempo
+  popd
+}
+
+install_mpassit () {
+  MODULE_FILE="build.${PLATFORM}.${COMPILER}"
+  module purge
+  module use ${MPAS_APP_DIR}/src/MPASSIT/modulefiles
+  module load ${MODULE_FILE}
+  pushd ${MPAS_APP_DIR}/src/MPASSIT
+  ./build.sh ${PLATFORM}
+  cp -v bin/mpassit ${EXEC_DIR}
   popd
 }
 
@@ -313,6 +324,7 @@ if [ ${ATMOS_ONLY} = false ]; then
 fi
 
 install_mpas_model
+install_mpassit
 install_upp
 
 if [ "${CLEAN}" = true ]; then
