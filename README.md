@@ -97,3 +97,71 @@ Logs are generated for each of the different tasks in the workflow, and `workflo
 ## Post-Processing 
 
 `MPASSIT` and `UPP` are used for post-processing and are included as submodules in the application, just like the `MPAS-Model`. Settings for post-processing components can be adjusted in your user configuration YAML, following the same nested structure described above. 
+
+
+# Quick Start Guide for CONUS
+
+
+## Clone and Build MPAS App
+
+
+### 1. Clone the app
+Use these commands to clone and enter the main repository:
+```
+git clone https://github.com/NOAA-GSL/mpas_app.git --recursive
+cd mpas_app
+```
+
+
+### 2. Switch to CONUS branch
+When cloning the repository, it will bring you to the `main` branch, which is not yet equipped to run CONUS. To do this you will need to switch to the `conus_jet` branch. To do this, run this command from the `mpas_app` directory:
+`git checkout conus_jet`
+
+Once this is done, you will need to update the submodules:
+`git submodule update --init --recursive`
+
+
+### 3. Build the app
+Now that you are on the right branch with updated submodules, we can build the app on Jet:
+`./build.sh -p=jet`
+This can take over an hour to complete. Once it is completed, you can ensure it was completed successfully by checking the executables in the `exec/` directory, which should contain:
+```
+atmosphere_model
+init_atmosphere_model
+mpassit
+upp.x
+```
+If these are all present, you can carry on to part 4.
+
+
+### 4. Preparing your user config
+Each user will need to provide a <user.yaml> file with a few configurations in the `ush/` directory. For CONUS, this can be as simple as:
+```
+user:
+ first_cycle: !!timestamp 2025-01-05T00:00:00
+ last_cycle:  !!timestamp 2025-01-05T00:00:00
+ experiment_dir: /path/to/rundir
+ platform: jet
+ mesh_label: hrrrv5
+data:
+ mesh_files: /misc/whome/role.wrfruc/HRRRv5/fix
+platform:
+ account: wrfruc
+```
+
+
+### 5. Generate the experiment
+Once you have created your user config, you can create the experiment by running this command within the `ush/` directory:
+`python experiment_gen.py workflows/conus.jet.yaml <user_config.yaml>`
+If this is successful, it will tell you there were 0 schema-validation errors in the Rocoto config and 0 Rocoto XML errors found.
+
+
+### 6. Run the experiment
+When you are ready to run the experiment you need to `cd` into your run directory.
+`cd rundir/`
+After this, you will need to iteratively run the `rocotorun` and `rocotostat` commands:
+```
+rocotorun -w rocoto.xml -d rocoto.db
+rocotostat -w rocoto.xml -d rocoto.db
+```
+Running `rocotorun -w rocoto.xml -d rocoto.db` will check the status of your tasks and start any tasks that are ready to be run. Running `rocotostat -w rocoto.xml -d rocoto.db` will report the status of the workflow that was learned when running the `rocotorun` command. You will repeat this through several steps, starting with `get_ics_data` and `get_lbcs_data` and ending with `upp`. Once UPP reports as successful, the experiment has completed. 
